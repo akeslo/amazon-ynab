@@ -102,8 +102,7 @@ class YNABClient:
         search_by = re.compile(r"^.*[amazon|AMZN].*$", re.IGNORECASE)
 
         filtered_transactions = filter(
-            lambda item: search_by.match(item["payee_name"])
-            and (item["memo"] in ["", None]),
+            lambda item: item["payee_name"] is not None and search_by.match(item["payee_name"]),
             transactions,
         )
 
