@@ -59,11 +59,12 @@ class AmazonClient:
 
         options = ChromeOptions()
 
-        if self.run_headless:
-            Console().print("[yellow]Running in headless mode[/]")
-            options.add_argument("--headless")
+        # Install ChromeDriver
+        ChromeDriverManager().install()
 
-        self.driver = Chrome(ChromeDriverManager().install(), options=options)
+        # Initialize the Chrome WebDriver with options
+        self.driver = Chrome(options=options)
+        
         self.wait_driver = WebDriverWait(
             self.driver,
             30,
