@@ -119,41 +119,16 @@ class TransactionInvoice:
 
     def _parse_payment_date(self) -> None:
         search_by = re.compile(r"Credit Card transactions")
-
-        # this is a little bit hacky, but when we have more than one transaction,
-        # we want the one that matches the payment we have from self.total_amount_paid.
-        # To do this, I look for that value on the credit card transactions of the
-        # invoice, and then the <td> element before that contains the date
-        # TODO: this is not working for some reason when the transaction was a gift card
-        search_in_block = not_none(
-            not_none(
-                not_none(
-                    not_none(
-                        not_none(
-                            not_none(self._parsed_as_soup.find(text=search_by)).parent
-                        ).parent
-                    ).parent
-                ).parent
-            ).findAll("td")
-        )[1].findAll("td")
-
-        for ix, text_ in enumerate(search_in_block):
-            text_ = (
-                text_.text.strip().replace("$", "").replace(",", "")
-            )  # this is to clean the potential amount paid
-            try:
-                if float(text_) == abs(
-                    not_none(self.total_amount_paid)
-                ):  # self.total_amount_paid is negative
-                    date_string: str = (
-                        search_in_block[ix - 1].text.strip().split(":")[1].strip()
-                    )
-
-                    self.payment_date = datetime.strptime(
-                        date_string, "%B %d, %Y"
-                    ).date()
-            except ValueError:
-                pass
+        
+        try:
+            transaction_table = self._parsed_as_soup.find(text=search_by).find_parent("table")
+            transaction_row = transaction_table.find("tr")
+            date_cell = transaction_row.find_all("td")[1]
+            
+            date_string = date_cell.text.strip().split(":")[1].strip()
+            self.payment_date = datetime.strptime(date_string, "%B %d, %Y").date()
+        except (AttributeError, IndexError, ValueError):
+            self.payment_date = None
 
     def _parse_orchestrator(self) -> None:
         self._parse_items()
