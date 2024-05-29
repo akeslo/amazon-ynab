@@ -119,16 +119,33 @@ class TransactionInvoice:
 
     def _parse_payment_date(self) -> None:
         search_by = re.compile(r"Credit Card transactions")
-        
-        try:
-            transaction_table = self._parsed_as_soup.find(text=search_by).find_parent("table")
-            transaction_row = transaction_table.find("tr")
-            date_cell = transaction_row.find_all("td")[1]
-            
-            date_string = date_cell.text.strip().split(":")[1].strip()
-            self.payment_date = datetime.strptime(date_string, "%B %d, %Y").date()
-        except (AttributeError, IndexError, ValueError):
-            self.payment_date = None
+
+        transaction_block = self._parsed_as_soup.find(text=search_by)
+
+        if transaction_block is None:
+            # Handle the case when the search text is not found
+            # You can log a warning, assign a default value, or take appropriate action
+            print(f"Warning: 'Credit Card transactions' not found in invoice {self.invoice_number}")
+            return
+
+        search_in_block = not_none(
+            not_none(
+                not_none(
+                    not_none(
+                        not_none(transaction_block.parent).parent
+                    ).parent
+                ).parent
+            ).findAll("td")
+        )[1].findAll("td")
+
+        for ix, text_ in enumerate(search_in_block):
+            text_ = text_.text.strip().replace("$", "").replace(",", "")
+            try:
+                if float(text_) == abs(not_none(self.total_amount_paid)):
+                    date_string: str = search_in_block[ix - 1].text.strip().split(":")[1].strip()
+                    self.payment_date = datetime.strptime(date_string, "%B %d, %Y").date()
+            except ValueError:
+                pass
 
     def _parse_orchestrator(self) -> None:
         self._parse_items()
